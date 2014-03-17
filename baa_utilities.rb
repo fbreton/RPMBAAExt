@@ -6,7 +6,7 @@ require 'base64'
 
 module BaaUtilities
   class << self
-
+  
     def rest_version
       "8.2"
     end
@@ -234,6 +234,8 @@ module BaaUtilities
 
     def get_model_type_to_psc_name(model_type)
       case model_type
+	  when "VIRTUAL_GUEST_PACKAGE"
+		return "SystemObject/Depot Object/Virtual Guest Package"
       when "JOB_GROUP"
         return "SystemObject/Static Group/Job Group"
       when "DEPOT_GROUP"
@@ -369,6 +371,34 @@ module BaaUtilities
     end
 
 
+	def get_job_uri_from_job_qualified_name(baa_base_url, baa_username, baa_password, baa_role, job)
+      url = "#{baa_base_url}/group/Jobs#{job}"
+      url += "?username=#{baa_username}&password=#{baa_password}&role=#{baa_role}&version=#{rest_version}"
+
+      response = RestClient.get URI.escape(url), :accept => :json 
+      parsed_response = JSON.parse(response)
+
+      if parsed_response.has_key? "ErrorResponse"
+        raise "Error while query URL #{url}: #{parsed_response["ErrorResponse"]["Error"]}"
+      end
+  
+      return parsed_response["PropertySetInstanceResponse"]["PropertySetInstance"]["uri"] rescue nil
+	end
+
+	def get_job_dbkey_from_job_qualified_name(baa_base_url, baa_username, baa_password, baa_role, job)
+      url = "#{baa_base_url}/group/Jobs#{job}"
+      url += "?username=#{baa_username}&password=#{baa_password}&role=#{baa_role}&version=#{rest_version}"
+
+      response = RestClient.get URI.escape(url), :accept => :json 
+      parsed_response = JSON.parse(response)
+
+      if parsed_response.has_key? "ErrorResponse"
+        raise "Error while query URL #{url}: #{parsed_response["ErrorResponse"]["Error"]}"
+      end
+  
+      return parsed_response["PropertySetInstanceResponse"]["PropertySetInstance"]["dbKey"] rescue nil
+	end
+	
     def get_root_group(baa_base_url, baa_username, baa_password, baa_role, object_type)
       url = "#{baa_base_url}/group/#{get_root_group_name(object_type)}"
       url += "?username=#{baa_username}&password=#{baa_password}&role=#{baa_role}&version=#{rest_version}"
@@ -403,6 +433,105 @@ module BaaUtilities
       job_obj = parsed_response["GroupChildrenResponse"]["GroupChildren"]["PropertySetInstances"]["Elements"][0] rescue nil
       return job_obj
     end
+	
+	def get_assets_from_uri(baa_base_url, baa_username, baa_password, baa_role,uri)
+		url = "#{baa_base_url}#{uri}?username=#{baa_username}&password=#{baa_password}&role=#{baa_role}"
+		response = RestClient.get URI.escape(url), :accept => :json 
+		parsed_response = JSON.parse(response)
+		if parsed_response.has_key? "ErrorResponse"
+			raise "Error while query URL #{url}: #{parsed_response["ErrorResponse"]["Error"]}"
+		end
+		if parsed_response["AssetChildrenResponse"]["AssetChildren"].has_key? "Assets"
+			return parsed_response["AssetChildrenResponse"]["AssetChildren"]["Assets"]["Elements"]
+		else
+			return []
+		end
+	end
+	
+	def get_value_from_uri(baa_base_url, baa_username, baa_password, baa_role,uri)
+		url = "#{baa_base_url}#{uri}?username=#{baa_username}&password=#{baa_password}&role=#{baa_role}"
+		response = RestClient.get URI.escape(url), :accept => :json 
+		parsed_response = JSON.parse(response)
+		if parsed_response.has_key? "ErrorResponse"
+			raise "Error while query URL #{url}: #{parsed_response["ErrorResponse"]["Error"]}"
+		end
+		return parsed_response["AssetAttributeValueResponse"]["AssetAttributeValue"]["value"]
+	end
+	
+	def get_property_value_from_uri(baa_base_url, baa_username, baa_password, baa_role,uri,propname)
+		url = "#{baa_base_url}#{uri}/?username=#{baa_username}&password=#{baa_password}&role=#{baa_role}"
+		response = RestClient.get URI.escape(url), :accept => :json 
+		parsed_response = JSON.parse(response)
+		if parsed_response.has_key? "ErrorResponse"
+			raise "Error while query URL #{url}: #{parsed_response["ErrorResponse"]["Error"]}"
+		end
+		if parsed_response["PropertySetInstanceChildrenResponse"]["PropertySetInstanceChildren"].has_key? "PropertyValues"
+			parsed_response["PropertySetInstanceChildrenResponse"]["PropertySetInstanceChildren"]["PropertyValues"]["Elements"].each do |elt|
+				return elt["value"] if elt["name"] == propname
+			end
+		end
+		return []	
+	end
+	
+	def get_server_dbkey_from_name(baa_base_url, baa_username, baa_password, baa_role,server)
+      url = "#{baa_base_url}/query"
+      url += "?username=#{baa_username}&password=#{baa_password}&role=#{baa_role}&version=#{rest_version}"
+      url += "&BQUERY=SELECT NAME FROM \"SystemObject/Server\" WHERE NAME equals \"#{server}\""
+
+      response = RestClient.get URI.escape(url), :accept => :json 
+      parsed_response = JSON.parse(response)
+
+      if parsed_response.has_key? "ErrorResponse"
+        raise "Error: while query URL #{url}: #{parsed_response["ErrorResponse"]["Error"]}"
+      end
+
+	  dbkey = parsed_response["PropertySetClassChildrenResponse"]["PropertySetClassChildren"]["PropertySetInstances"]["Elements"][0]["dbKey"] rescue nil
+      raise "Error: Could not find sever #{server}." if servuri.nil?
+      
+      return dbkey	
+	end
+	
+	def get_server_uri_from_name(baa_base_url, baa_username, baa_password, baa_role,server)
+      url = "#{baa_base_url}/query"
+      url += "?username=#{baa_username}&password=#{baa_password}&role=#{baa_role}&version=#{rest_version}"
+      url += "&BQUERY=SELECT NAME FROM \"SystemObject/Server\" WHERE NAME equals \"#{server}\""
+
+      response = RestClient.get URI.escape(url), :accept => :json 
+      parsed_response = JSON.parse(response)
+
+      if parsed_response.has_key? "ErrorResponse"
+        raise "Error: while query URL #{url}: #{parsed_response["ErrorResponse"]["Error"]}"
+      end
+
+	  servuri = parsed_response["PropertySetClassChildrenResponse"]["PropertySetClassChildren"]["PropertySetInstances"]["Elements"][0]["uri"] rescue nil
+      raise "Error: Could not find sever #{server}." if servuri.nil?
+      
+      return servuri	
+	end
+	
+	def list_virtual_mgr(baa_base_url, baa_username, baa_password, baa_role)
+		result = []
+		url = "#{baa_base_url}/type/PropertySetClasses/SystemObject/Virtualization/"
+		url += "?username=#{baa_username}&password=#{baa_password}&role=#{baa_role}"
+		response = RestClient.get URI.escape(url), :accept => :json 
+		parsed_response = JSON.parse(response)["PropertySetClassChildrenResponse"]["PropertySetClassChildren"]["PropertySetInstances"]["Elements"]
+		id = 0
+		parsed_response.each do |elt|
+			id += 1
+			servname = elt["name"]
+			url = "#{baa_base_url}#{elt["uri"]}/"
+			url += "?username=#{baa_username}&password=#{baa_password}&role=#{baa_role}"
+			response = RestClient.get URI.escape(url), :accept => :json 
+			response = JSON.parse(response)["PropertySetInstanceChildrenResponse"]["PropertySetInstanceChildren"]["PropertyValues"]["Elements"]
+			mgr = ""
+			response.each do |serv|
+				mgr = serv["value"] if serv["name"] == "VIRTUAL_ENTITY_TYPE"
+			end
+			uri = get_server_uri_from_name(baa_base_url, baa_username, baa_password, baa_role, servname)
+			result << {"name" => servname, "id" => id, "mgr" => mgr, "uri" => uri}
+		end
+		return result
+	end
 	
     ########################################################################################
     #                                   SOAP SERVICES                                      #
@@ -461,7 +590,11 @@ module BaaUtilities
         soap.header = {"ins1:sessionId" => session_id}
        
         body_details = { :nameSpace => namespace, :commandName => command, :commandArguments => args }
-        body_details.merge!({:payload => payload}) if payload
+		
+		if payload
+			payload = Base64.encode64(payload)
+			body_details.merge!({:payload => { :argumentNameArray => "fileName", :dataHandlerArray => [payload], :fileNameArray => "sentpayload"}})
+		end
 
         soap.body = body_details
       end
@@ -503,7 +636,21 @@ module BaaUtilities
       result = response.body[:execute_command_by_param_list_response][:return]
       return result
     end
-
+	
+	def baa_soap_get_uri_from_dbkey(baa_base_url, session_id, dbkey)
+		return baa_soap_execute_cli_command_by_param_list(baa_base_url, session_id, "GenericObject", "getRESTfulURI", [dbkey])[:return_value]
+	end
+	
+	def baa_soap_get_vgp_by_group_and_name(baa_base_url, session_id, group, vgpname)
+		vgpid = baa_soap_execute_cli_command_by_param_list(baa_base_url, session_id, "Virtualization", "getVirtualGuestPackageIdByGroupAndName", [group,vgpname])[:return_value]
+		return baa_soap_execute_cli_command_by_param_list(baa_base_url, session_id, "Virtualization", "getVirtualGuestPackage", [vgpid])[:return_value]
+	end
+	
+	def baa_soap_get_uri_from_servername(baa_base_url, session_id, servername)
+		dbkey = baa_soap_execute_cli_command_by_param_list(baa_base_url, session_id, "Server", "getServerDBKeyByName", [servername])[:return_value]
+		return baa_soap_get_uri_from_dbkey(baa_base_url, session_id, dbkey)
+	end
+	
 	def baa_soap_execute_job_against(baa_base_url, baa_username, baa_password, baa_role, session_id, jobkey, targets)
 		#first we remove all targets from the job
 		jobkey = baa_soap_execute_cli_command_by_param_list(baa_base_url, session_id, "Job", "clearTargetComponentGroups", [jobkey])[:return_value]
@@ -788,6 +935,18 @@ module BaaUtilities
                     job_group_path,     #groupName
                     job_name,           #jobName
                     property,           #parameterName
+                    value_as_string     #valueAsString
+                  ])
+
+      deploy_job = result[:return_value]
+    end
+	
+	def baa_set_nsh_script_property_value_in_job(baa_base_url, session_id, job_group_path, job_name, propindex, value_as_string)
+      result = baa_soap_execute_cli_command_by_param_list(baa_base_url, session_id, "NSHScriptJob", "addNSHScriptParameterValueByGroupAndName",
+                  [
+                    job_group_path,     #groupName
+                    job_name,           #jobName
+                    propindex,           #parameterName
                     value_as_string     #valueAsString
                   ])
 
