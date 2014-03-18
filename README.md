@@ -72,7 +72,7 @@ To be able to use the VM provisioning automation, you'll need to fist setup the 
       * IP Address: Ip address to be resolved to the provided hostname
       * Hostname: hostname to be resolved to the provided IP address
     * the job need to be associated with the targets on which the IP resolution needs to be updated
-	* * The file UpdateHostFile.nsh is an exemple of nsh script that can be use. (it only manage File resolution) *
+	* *The file UpdateHostFile.nsh is an exemple of nsh script that can be use. (it only manage File resolution)*
   4. If you want the provisioning automation to update the server properties of the VM that has been provisionned in BLadeLogic, then you need to:
     * create an Update Server Properties Job in the Jobs folder BRPM/Provisioning that has to be named: Update properties
     * be sure that the hostname you've provided for the VM you provision is resolved after the VM is provisioned by at least the BladeLogic server or the job won't be able to update the server properties and the automation will fail.
