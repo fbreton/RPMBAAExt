@@ -66,12 +66,13 @@ To be able to use the VM provisioning automation, you'll need to fist setup the 
   1. In the Depot folder, create the directory path: BRPM/Provisioning, then put the VGP that you want to be able to use to provision VMs in this folder. Those VGP need to be template based.
   2. In the Jobs folder, create the directory path: BRPM/Provisioning. The povisioning jobs will be create on this location.
   3. If you want the provisioning automation to update the IP resolution then you need to do the following:
-    * create in BRPM/Provisioning an NSH Job named: Update IP resolution
+    * create in BRPM/Provisioning an NSH Job named: Update IP resolution 
     * This job need to have 3 parameters in the following order (name of parameters is not important):
       * Resolution Type: type of resolution, entry provided will be File or DNS
       * IP Address: Ip address to be resolved to the provided hostname
       * Hostname: hostname to be resolved to the provided IP address
     * the job need to be associated with the targets on which the IP resolution needs to be updated
+	* * The file UpdateHostFile.nsh is an exemple of nsh script that can be use. (it only manage File resolution) *
   4. If you want the provisioning automation to update the server properties of the VM that has been provisionned in BLadeLogic, then you need to:
     * create an Update Server Properties Job in the Jobs folder BRPM/Provisioning that has to be named: Update properties
     * be sure that the hostname you've provided for the VM you provision is resolved after the VM is provisioned by at least the BladeLogic server or the job won't be able to update the server properties and the automation will fail.
