@@ -515,9 +515,7 @@ module BaaUtilities
 		url += "?username=#{baa_username}&password=#{baa_password}&role=#{baa_role}"
 		response = RestClient.get URI.escape(url), :accept => :json 
 		parsed_response = JSON.parse(response)["PropertySetClassChildrenResponse"]["PropertySetClassChildren"]["PropertySetInstances"]["Elements"]
-		id = 0
 		parsed_response.each do |elt|
-			id += 1
 			servname = elt["name"]
 			url = "#{baa_base_url}#{elt["uri"]}/"
 			url += "?username=#{baa_username}&password=#{baa_password}&role=#{baa_role}"
@@ -528,7 +526,8 @@ module BaaUtilities
 				mgr = serv["value"] if serv["name"] == "VIRTUAL_ENTITY_TYPE"
 			end
 			uri = get_server_uri_from_name(baa_base_url, baa_username, baa_password, baa_role, servname)
-			result << {"name" => servname, "id" => id, "mgr" => mgr, "uri" => uri}
+			dbkey = get_server_dbkey_from_name(baa_base_url, baa_username, baa_password, baa_role, servname)
+			result << {"name" => servname, "id" => get_id_from_db_key(dbkey), "mgr" => mgr, "uri" => uri}
 		end
 		return result
 	end
