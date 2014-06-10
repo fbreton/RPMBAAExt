@@ -486,7 +486,7 @@ module BaaUtilities
       end
 
 	  dbkey = parsed_response["PropertySetClassChildrenResponse"]["PropertySetClassChildren"]["PropertySetInstances"]["Elements"][0]["dbKey"] rescue nil
-      raise "Error: Could not find sever #{server}." if servuri.nil?
+      raise "Error: Could not find sever #{server}." if dbkey.nil?
       
       return dbkey	
 	end
